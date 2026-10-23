@@ -43,6 +43,7 @@ spec:
             secretKeyRef:
               name: simply-credentials
               key: account-name
+              optional: true
         - name: SIMPLY_API_KEY
           valueFrom:
             secretKeyRef:

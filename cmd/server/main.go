@@ -53,10 +53,6 @@ func main() {
 
 	// Get configuration from environment
 	accountName := os.Getenv("SIMPLY_ACCOUNT_NAME")
-	if accountName == "" {
-		logger.Error("SIMPLY_ACCOUNT_NAME environment variable is required")
-		os.Exit(1)
-	}
 
 	apiKey := os.Getenv("SIMPLY_API_KEY")
 	if apiKey == "" {

@@ -2,7 +2,6 @@ package simply
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,6 +16,7 @@ const (
 
 // Client is a Simply.com API client
 type Client struct {
+	// AccountName is no longer used; the API key alone identifies the account.
 	AccountName string
 	APIKey      string
 	BaseURL     string
@@ -62,9 +62,7 @@ func (c *Client) makeRequest(method, endpoint string, body interface{}) ([]byte,
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
-	// Add Basic Authentication
-	auth := base64.StdEncoding.EncodeToString([]byte(c.AccountName + ":" + c.APIKey))
-	req.Header.Set("Authorization", "Basic "+auth)
+	req.Header.Set("Authorization", "Bearer "+c.APIKey)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 

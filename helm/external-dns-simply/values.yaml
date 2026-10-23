@@ -20,7 +20,7 @@ domainFilter: ""
 # Simply.com credentials - reference an existing secret
 simply:
   existingSecret: simply-credentials
-  # Keys in the secret
+  # Keys in the secret (account-name is optional and no longer used)
   accountNameKey: account-name
   apiKeyKey: api-key
 

@@ -38,6 +38,7 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.simply.existingSecret }}
                   key: {{ .Values.simply.accountNameKey }}
+                  optional: true
             - name: SIMPLY_API_KEY
               valueFrom:
                 secretKeyRef:
