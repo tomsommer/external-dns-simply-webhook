@@ -38,12 +38,6 @@ spec:
           name: http
           protocol: TCP
         env:
-        - name: SIMPLY_ACCOUNT_NAME
-          valueFrom:
-            secretKeyRef:
-              name: simply-credentials
-              key: account-name
-              optional: true
         - name: SIMPLY_API_KEY
           valueFrom:
             secretKeyRef:

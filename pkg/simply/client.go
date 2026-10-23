@@ -18,19 +18,16 @@ const (
 
 // Client is a Simply.com API client
 type Client struct {
-	// AccountName is no longer used; the API key alone identifies the account.
-	AccountName string
-	APIKey      string
-	BaseURL     string
-	HTTPClient  *http.Client
+	APIKey     string
+	BaseURL    string
+	HTTPClient *http.Client
 }
 
 // NewClient creates a new Simply.com API client
-func NewClient(accountName, apiKey string) *Client {
+func NewClient(apiKey string) *Client {
 	return &Client{
-		AccountName: accountName,
-		APIKey:      apiKey,
-		BaseURL:     BaseURL,
+		APIKey:  apiKey,
+		BaseURL: BaseURL,
 		HTTPClient: &http.Client{
 			Timeout: DefaultTimeout,
 		},

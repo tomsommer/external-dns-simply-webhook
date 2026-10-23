@@ -28,7 +28,7 @@ func TestListDomainsAndRecordPaths(t *testing.T) {
 	}))
 	defer server.Close()
 
-	client := NewClient("", "secret")
+	client := NewClient("secret")
 	client.BaseURL = server.URL + "/"
 
 	domains, err := client.ListDomains()

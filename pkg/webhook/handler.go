@@ -135,7 +135,7 @@ func (h *Handler) ApplyChanges(w http.ResponseWriter, r *http.Request) {
 	h.Logger.Debug("Full request payload", slog.Any("changes", changes))
 
 	// Fetch all records from all domains and build a lookup map
-	// Key: dnsName:recordType, Value: simply.Record
+	// Key: object:dnsName:recordType, Value: simply.Record
 	recordMap := make(map[string]simply.Record)
 
 	for _, domain := range h.Domains {
@@ -147,8 +147,8 @@ func (h *Handler) ApplyChanges(w http.ResponseWriter, r *http.Request) {
 		}
 
 		for _, record := range records {
-			// Create lookup key: dnsName:recordType
-			key := fmt.Sprintf("%s:%s", recordDNSName(record, domain), record.Type)
+			// Create lookup key: object:dnsName:recordType
+			key := recordKey(domain.Object, recordDNSName(record, domain), record.Type)
 			recordMap[key] = record
 		}
 	}
@@ -188,7 +188,13 @@ func (h *Handler) ApplyChanges(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Lookup record ID from map
-		key := fmt.Sprintf("%s:%s", newEp.DNSName, newEp.RecordType)
+		object, err := h.extractDomain(newEp.DNSName)
+		if err != nil {
+			h.Logger.Error("Failed to find domain for update", "dnsName", newEp.DNSName, "error", err)
+			http.Error(w, fmt.Sprintf("Failed to update record: %v", err), http.StatusInternalServerError)
+			return
+		}
+		key := recordKey(object, newEp.DNSName, newEp.RecordType)
 		existingRecord, found := recordMap[key]
 		if !found {
 			h.Logger.Error("Record not found in map for update", "key", key)
@@ -205,7 +211,12 @@ func (h *Handler) ApplyChanges(w http.ResponseWriter, r *http.Request) {
 
 	// Process deletes - lookup record ID from map
 	for _, ep := range changes.Delete {
-		key := fmt.Sprintf("%s:%s", ep.DNSName, ep.RecordType)
+		object, err := h.extractDomain(ep.DNSName)
+		if err != nil {
+			h.Logger.Warn("No domain found for deletion, skipping", "dnsName", ep.DNSName, "error", err)
+			continue
+		}
+		key := recordKey(object, ep.DNSName, ep.RecordType)
 		existingRecord, found := recordMap[key]
 		if !found {
 			h.Logger.Warn("Record not found in map for deletion, skipping", "key", key)
@@ -377,6 +388,11 @@ func (h *Handler) extractDomain(dnsName string) (string, error) {
 		candidate = candidate[dot+1:]
 	}
 	return "", fmt.Errorf("no managed Simply.com domain found for %s", dnsName)
+}
+
+// recordKey identifies a record by product object, DNS name and type
+func recordKey(object, dnsName, recordType string) string {
+	return fmt.Sprintf("%s:%s:%s", object, strings.ToLower(strings.TrimSuffix(dnsName, ".")), recordType)
 }
 
 // recordDNSName builds the full punycode DNS name of a record in domain

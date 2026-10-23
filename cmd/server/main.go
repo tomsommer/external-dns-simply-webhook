@@ -52,8 +52,6 @@ func main() {
 	}))
 
 	// Get configuration from environment
-	accountName := os.Getenv("SIMPLY_ACCOUNT_NAME")
-
 	apiKey := os.Getenv("SIMPLY_API_KEY")
 	if apiKey == "" {
 		logger.Error("SIMPLY_API_KEY environment variable is required")
@@ -66,7 +64,7 @@ func main() {
 	}
 
 	// Create Simply.com client
-	client := simply.NewClient(accountName, apiKey)
+	client := simply.NewClient(apiKey)
 
 	// Fetch all domains managed by Simply.com
 	logger.Info("Fetching domains from Simply.com.")
