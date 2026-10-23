@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -45,6 +47,13 @@ type Record struct {
 	Comment string `json:"comment,omitempty"`
 }
 
+// Domain is a DNS-managed product on the account. Object is the product
+// handle used in API paths, Name is the punycode (ASCII) domain name.
+type Domain struct {
+	Object string
+	Name   string
+}
+
 // makeRequest performs an HTTP request with authentication
 func (c *Client) makeRequest(method, endpoint string, body interface{}) ([]byte, error) {
 	var reqBody io.Reader
@@ -56,8 +65,8 @@ func (c *Client) makeRequest(method, endpoint string, body interface{}) ([]byte,
 		reqBody = bytes.NewBuffer(jsonBody)
 	}
 
-	url := c.BaseURL + endpoint
-	req, err := http.NewRequest(method, url, reqBody)
+	reqURL := c.BaseURL + endpoint
+	req, err := http.NewRequest(method, reqURL, reqBody)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
@@ -85,8 +94,8 @@ func (c *Client) makeRequest(method, endpoint string, body interface{}) ([]byte,
 }
 
 // ListDomains returns all domains managed by Simply.com
-func (c *Client) ListDomains() ([]string, error) {
-	resp, err := c.makeRequest("GET", "my/products", nil)
+func (c *Client) ListDomains() ([]Domain, error) {
+	resp, err := c.makeRequest("GET", "my/products/", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list products: %w", err)
 	}
@@ -96,6 +105,7 @@ func (c *Client) ListDomains() ([]string, error) {
 			Object string `json:"object"`
 			Domain struct {
 				Name    string `json:"name"`
+				NameIDN string `json:"name_idn"`
 				Managed bool   `json:"managed"`
 			} `json:"domain"`
 		} `json:"products"`
@@ -105,12 +115,20 @@ func (c *Client) ListDomains() ([]string, error) {
 		return nil, fmt.Errorf("failed to parse products response: %w", err)
 	}
 
-	var domains []string
+	var domains []Domain
 	for _, product := range result.Products {
 		// Only include managed domains
-		if product.Domain.Managed {
-			domains = append(domains, product.Object)
+		if !product.Domain.Managed {
+			continue
 		}
+		name := product.Domain.NameIDN
+		if name == "" {
+			name = product.Object
+		}
+		domains = append(domains, Domain{
+			Object: product.Object,
+			Name:   strings.ToLower(name),
+		})
 	}
 
 	return domains, nil
@@ -118,7 +136,7 @@ func (c *Client) ListDomains() ([]string, error) {
 
 // ListRecords returns all DNS records for a domain
 func (c *Client) ListRecords(domain string) ([]Record, error) {
-	endpoint := fmt.Sprintf("my/products/%s/dns/records", domain)
+	endpoint := fmt.Sprintf("my/products/%s/dns/records/", url.PathEscape(domain))
 
 	respBody, err := c.makeRequest("GET", endpoint, nil)
 	if err != nil {
@@ -157,7 +175,7 @@ func (c *Client) ListRecords(domain string) ([]Record, error) {
 
 // AddRecord adds a new DNS record
 func (c *Client) AddRecord(domain string, record Record) error {
-	endpoint := fmt.Sprintf("my/products/%s/dns/records", domain)
+	endpoint := fmt.Sprintf("my/products/%s/dns/records/", url.PathEscape(domain))
 
 	payload := map[string]interface{}{
 		"type":    record.Type,
@@ -177,7 +195,7 @@ func (c *Client) AddRecord(domain string, record Record) error {
 
 // UpdateRecord updates an existing DNS record
 func (c *Client) UpdateRecord(domain string, record Record) error {
-	endpoint := fmt.Sprintf("my/products/%s/dns/records/%d", domain, record.ID)
+	endpoint := fmt.Sprintf("my/products/%s/dns/records/%d/", url.PathEscape(domain), record.ID)
 
 	payload := map[string]interface{}{
 		"type":    record.Type,
@@ -197,7 +215,7 @@ func (c *Client) UpdateRecord(domain string, record Record) error {
 
 // DeleteRecord deletes a DNS record
 func (c *Client) DeleteRecord(domain string, record Record) error {
-	endpoint := fmt.Sprintf("my/products/%s/dns/records/%d", domain, record.ID)
+	endpoint := fmt.Sprintf("my/products/%s/dns/records/%d/", url.PathEscape(domain), record.ID)
 
 	_, err := c.makeRequest("DELETE", endpoint, nil)
 	if err != nil {
